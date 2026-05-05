@@ -306,6 +306,3 @@ default:
     end
    end
 endmodule
-
-	
-:
