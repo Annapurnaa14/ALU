@@ -1,5 +1,4 @@
 module aludesign #(parameter N = 4) (OPA, OPB, INP_VALID, CIN, CLK, RST, CMD, CE, MODE,COUT, OFLOW, RES, G, E, L, ERR);
-
 input  [N-1:0] OPA, OPB;
 input  CLK, RST, CE, MODE, CIN;
 input  [1:0] INP_VALID;
@@ -71,57 +70,57 @@ always @(posedge CLK or posedge RST) begin
             ERR   <= 1'b0;
 
             case (CMD)
-                4'b0000: begin
+                4'b0000: begin //ADD
                     if (INP_VALID == 2'b11) begin
                         RES  <= {{N{1'b0}}, add_result[N-1:0]};
                         COUT <= add_result[N];
                     end
                 end
 
-                4'b0001: begin
+                4'b0001: begin // SUB
                     if (INP_VALID == 2'b11) begin
                         OFLOW <= (OPA_1 < OPB_1) ? 1'b1 : 1'b0;
                         RES   <= {{N{1'b0}}, OPA_1 - OPB_1};
                     end
                 end
 
-                4'b0010: begin
+                4'b0010: begin // ADD CIN
                     if (INP_VALID == 2'b11) begin
-                        RES  <= {{N{1'b0}}, addc_result[N-1:0]};
-                        COUT <= addc_result[N];
+						RES  <= {{N{1'b0}}, add_withc_result[N-1:0]};
+                        COUT <= add_withc_result[N];
                     end
                 end
 
-                4'b0011: begin
+                4'b0011: begin // SUB CIN
                     if (INP_VALID == 2'b11) begin
                         OFLOW <= (OPA_1 < OPB_1) ? 1'b1 : 1'b0;
                         RES   <= {{N{1'b0}}, OPA_1 - OPB_1 - {{N-1{1'b0}}, CIN}};
                     end
                 end
 
-                4'b0100: begin
+                4'b0100: begin //INC A
                     if ((INP_VALID == 2'b11) || (INP_VALID == 2'b01))
                         RES <= {{N{1'b0}}, OPA_1 + 1'b1};
                 end
 
-                4'b0101: begin
+                4'b0101: begin //DEC A
                     if ((INP_VALID == 2'b11) || (INP_VALID == 2'b01))
                         RES <= {{N{1'b0}}, OPA_1 - 1'b1};
                     else
                         ERR <= 1'b1;
                 end
 
-                4'b0110: begin
+                4'b0110: begin //INC B
                     if (INP_VALID == 2'b10)
                         RES <= {{N{1'b0}}, OPB_1 + 1'b1};
                 end
 
-                4'b0111: begin
+                4'b0111: begin //DEC B
                     if (INP_VALID == 2'b10)
                         RES <= {{N{1'b0}}, OPB_1 - 1'b1};
                 end
 
-                4'b1000: begin
+                4'b1000: begin //COMP
                     RES <= {2*N{1'b0}};
                     if (OPA_1 == OPB_1) begin
                         E <= 1'b1; G <= 1'b0; L <= 1'b0;
@@ -132,17 +131,17 @@ always @(posedge CLK or posedge RST) begin
                     end
                 end
 
-                4'b1001: begin
+                4'b1001: begin // MULTIPLICATION
                     if (M2active)
                         RES <= Mul_RES;
                 end
 
-                4'b1010: begin
+                4'b1010: begin 
                     if (INP_VALID == 2'b11)
                         RES <= ({{N{1'b0}}, OPA_1} << 1) * {{N{1'b0}}, OPB_1};
                 end
 
-                4'b1011: begin
+                4'b1011: begin // SIGNED ADDITION
                     if (INP_VALID == 2'b11) begin
                         signedOPA_ext = $signed({{1'b0}, OPA_1});
                         signedOPB_ext = $signed({{1'b0}, OPB_1});
@@ -161,7 +160,7 @@ always @(posedge CLK or posedge RST) begin
                     end
                 end
 
-                4'b1100: begin
+                4'b1100: begin // SIGNED SUBTRACTION
                     if (INP_VALID == 2'b11) begin
                         signedOPA_ext = $signed({{1'b0}, OPA_1});
                         signedOPB_ext = $signed({{1'b0}, OPB_1});
@@ -180,7 +179,7 @@ always @(posedge CLK or posedge RST) begin
                     end
                 end
 
-                default: begin
+                default: begin //DEFAULT CASE
                     RES   <= {2*N{1'b0}};
                     COUT  <= 1'b0;
                     OFLOW <= 1'b0;
@@ -202,21 +201,21 @@ always @(posedge CLK or posedge RST) begin
             L     <= 1'b0;
             ERR   <= 1'b0;
 
-            case (CMD)
-                4'b0000: RES <= {{N{1'b0}}, OPA_1 & OPB_1};
-                4'b0001: RES <= {{N{1'b0}}, ~(OPA_1 & OPB_1)};
-                4'b0010: RES <= {{N{1'b0}}, OPA_1 | OPB_1};
-                4'b0011: RES <= {{N{1'b0}}, ~(OPA_1 | OPB_1)};
-                4'b0100: RES <= {{N{1'b0}}, OPA_1 ^ OPB_1};
-                4'b0101: RES <= {{N{1'b0}}, ~(OPA_1 ^ OPB_1)};
-                4'b0110: RES <= {{N{1'b0}}, ~OPA_1};
-                4'b0111: RES <= {{N{1'b0}}, ~OPB_1};
-                4'b1000: RES <= {{N{1'b0}}, OPA_1 >> 1};
-                4'b1001: RES <= {{N{1'b0}}, OPA_1 << 1};
-                4'b1010: RES <= {{N{1'b0}}, OPB_1 >> 1};
-                4'b1011: RES <= {{N{1'b0}}, OPB_1 << 1};
+			case (CMD) 
+				4'b0000: RES <= {{N{1'b0}}, OPA_1 & OPB_1}; // AND
+				4'b0001: RES <= {{N{1'b0}}, ~(OPA_1 & OPB_1)}; //NAND
+				4'b0010: RES <= {{N{1'b0}}, OPA_1 | OPB_1}; //OR
+				4'b0011: RES <= {{N{1'b0}}, ~(OPA_1 | OPB_1)}; //NOR
+				4'b0100: RES <= {{N{1'b0}}, OPA_1 ^ OPB_1}; //XOR
+				4'b0101: RES <= {{N{1'b0}}, ~(OPA_1 ^ OPB_1)}; //XNOR
+				4'b0110: RES <= {{N{1'b0}}, ~OPA_1};  //NOT A
+				4'b0111: RES <= {{N{1'b0}}, ~OPB_1}; //NOT B
+				4'b1000: RES <= {{N{1'b0}}, OPA_1 >> 1}; //SHIFT RIGHT A
+				4'b1001: RES <= {{N{1'b0}}, OPA_1 << 1}; SHIFT LEFT A
+				4'b1010: RES <= {{N{1'b0}}, OPB_1 >> 1}; SHIFT RIGHT B
+				4'b1011: RES <= {{N{1'b0}}, OPB_1 << 1}; SHIFT LEFT B
 
-                4'b1100: begin
+                4'b1100: begin // ROTATE LEFT
                     ERR <= (OPB_1[N-1:3] != {(N-3){1'b0}}) ? 1'b1 : 1'b0;
                     if (OPB_1[2:0] == 3'b000)
                         RES <= {{N{1'b0}}, OPA_1};
@@ -225,7 +224,7 @@ always @(posedge CLK or posedge RST) begin
                                 (OPA_1 << OPB_1[2:0]) | (OPA_1 >> (N - OPB_1[2:0]))};
                 end
 
-                4'b1101: begin
+                4'b1101: begin //ROTATE RIGHT 
                     ERR <= (OPB_1[N-1:3] != {(N-3){1'b0}}) ? 1'b1 : 1'b0;
                     if (OPB_1[2:0] == 3'b000)
                         RES <= {{N{1'b0}}, OPA_1};
@@ -233,7 +232,6 @@ always @(posedge CLK or posedge RST) begin
                         RES <= {{N{1'b0}},
                                 (OPA_1 >> OPB_1[2:0]) | (OPA_1 << (N - OPB_1[2:0]))};
                 end
-
                 default: begin
                     RES   <= {2*N{1'b0}};
                     COUT  <= 1'b0;
@@ -243,11 +241,8 @@ always @(posedge CLK or posedge RST) begin
                     L     <= 1'b0;
                     ERR   <= 1'b0;
                 end
-
             endcase
         end
-
-    end
+   end
 end
-
 endmodule
