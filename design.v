@@ -35,8 +35,8 @@ always @(*) begin
     OPA_1 = {N{1'b0}};
     OPB_1 = {N{1'b0}};
     if (CE) begin
-        if (INP_VALID[0]) OPA_1 <= OPA;
-        if (INP_VALID[1]) OPB_1 <= OPB;
+        if (INP_VALID[0]) OPA_1 = OPA;
+        if (INP_VALID[1]) OPB_1 = OPB;
     end
 end
 
@@ -60,11 +60,8 @@ begin
     end
     else if (CE) begin
         M2active <= M1active;
-        Mul_RES<= Mul_OPA * Mul_OPB;
-        
+Mul_RES <= (OPA_1 + 1'b1) * (OPB_1 + 1'b1);        
         if (CMD == 4'b1001 && MODE == 1'b1) begin
-            Mul_OPA  <= OPA_1 + 1'b1;
-            Mul_OPB  <= OPB_1 + 1'b1;
             M1active <= 1'b1;
             mul_abort<=1'b0;
         end
@@ -163,14 +160,12 @@ begin
 
                 // CMD 9 :MULTIPLCIATION
                 4'b1001: begin
-                    if (M2active && !mul_abort)
-                   begin
-                        RES <= Mul_RES;
-                        MUL_VALID <= 1'b1;   
-                   end 
-                else
-                begin
-                MUL_VALID <= 1'b0; end
+                if (M2active && !mul_abort) begin
+                    RES <= Mul_RES;
+                    MUL_VALID <= 1'b1;
+                end else begin
+                MUL_VALID <= 1'b0;
+                end
                 end
               
 
