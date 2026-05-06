@@ -28,9 +28,9 @@ reg  MUL_VALID;
 wire [N:0] add_result;
 wire [N:0] addc_result;
 wire [N:0]   sub_cin_result;
-assign add_result  = {1'b0, OPA_1} + {1'b0, OPB_1};
-assign addc_result = {1'b0, OPA_1} + {1'b0, OPB_1} + {{N{1'b0}}, CIN};
-assign sub_cin_result = {1'b0, OPA_1} - {1'b0, OPB_1} - {{N{1'b0}}, CIN};
+assign add_result  = OPA_1 + OPB_1;
+assign addc_result = OPA_1 + OPB_1 +  CIN;
+assign sub_cin_result = OPA_1-OPB_1-CIN;
 always @(*) begin
     OPA_1 = {N{1'b0}};
     OPB_1 = {N{1'b0}};
