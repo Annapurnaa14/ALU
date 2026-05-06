@@ -35,8 +35,8 @@ always @(*) begin
     OPA_1 = {N{1'b0}};
     OPB_1 = {N{1'b0}};
     if (CE) begin
-        if (INP_VALID[0]) OPA_1 = OPA;
-        if (INP_VALID[1]) OPB_1 = OPB;
+        if (INP_VALID[0]) OPA_1 <= OPA;
+        if (INP_VALID[1]) OPB_1 <= OPB;
     end
 end
 
