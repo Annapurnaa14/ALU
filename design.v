@@ -156,8 +156,15 @@ begin
                 // CMD 9 :MULTIPLCIATION
                 4'b1001: begin
                     if (M2active)
+                   begin
                         RES <= Mul_RES;
+                        MUL_VALID <= 1'b1;   
+                   end 
+                else
+                begin
+                MUL_VALID <= 1'b0; end
                 end
+              
 
                 // CMD 10 : Left-shift OPA by 1, then multiply with OPB
                 4'b1010: begin
@@ -249,23 +256,37 @@ begin
                 4'b1011: RES <= {{N{1'b0}}, OPB_1 << 1};//SHIFT LEFT B
 
                 // CMD 12 : Rotate Left
-                4'b1100: begin
-                    if (OPB_1[N-1:3] != {(N-3){1'b0}})
-                        ERR <= 1'b1; 
-                    if (OPB_1[2:0] == 3'b000)
-                        RES <= {{N{1'b0}}, OPA_1};
-                    else
-                        RES <= {{N{1'b0}}, (OPA_1 << OPB_1[2:0]) | (OPA_1 >> (N - OPB_1[2:0]))};
+                4'b1100:begin
+                if (OPB_1[N-1:3] != {(N-3){1'b0}})
+                begin
+                    ERR <= 1'b1;
+                    RES <= {2*N{1'b0}};    
+                end 
+                else if (OPB_1[2:0] == 3'b000) 
+                begin
+                    RES <= {{N{1'b0}}, OPA_1};
+                end 
+                else 
+                begin
+                    RES <= {{N{1'b0}}, (OPA_1 << OPB_1[2:0]) | (OPA_1 >> (N - OPB_1[2:0]))};
+                end
                 end
 
                 // CMD 13 : Rotate Right
-                4'b1101: begin
-                    if (OPB_1[N-1:3] != {(N-3){1'b0}})
-                        ERR <= 1'b1; 
-                    if (OPB_1[2:0] == 3'b000)
-                        RES<={{N{1'b0}}, OPA_1};
-                    else
-                        RES<={{N{1'b0}},(OPA_1 >> OPB_1[2:0])|(OPA_1 << (N - OPB_1[2:0]))};
+                4'b1101:  begin
+                if (OPB_1[N-1:3] != {(N-3){1'b0}}) 
+                begin
+                        ERR <= 1'b1;
+                        RES <= {2*N{1'b0}};
+                end 
+                else if (OPB_1[2:0] == 3'b000) 
+                begin
+                    RES <= {{N{1'b0}}, OPA_1};  
+                end
+                else 
+                begin
+                RES <= {{N{1'b0}}, (OPA_1 >> OPB_1[2:0]) | (OPA_1 << (N - OPB_1[2:0]))};
+                 end
                 end
 
                 default: begin
