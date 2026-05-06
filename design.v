@@ -12,7 +12,7 @@ output reg  OFLOW = 1'b0;
 output reg  G = 1'b0;
 output reg  E = 1'b0;
 output reg  L = 1'b0;
-output reg  ERR = 1'bz;          
+output reg  ERR = 1'b0;          
 
 // INTERNAL REGISTERS
 reg [N-1:0] OPA_1, OPB_1;
@@ -45,7 +45,7 @@ begin
         G <= 1'b0;
         E <= 1'b0;
         L <= 1'b0;
-        ERR <= 1'bz; 
+        ERR <= 1'b0; 
         Mul_OPA <= {N{1'b0}};
         Mul_OPB <= {N{1'b0}};
         Mul_RES <= {2*N{1'b0}};
@@ -72,7 +72,7 @@ begin
             G<= 1'b0;
             E<= 1'b0;
             L<= 1'b0;
-            ERR<= 1'bz;  
+            ERR<= 1'b0;  
             
             case (CMD)
                 // CMD 0 : Unsigned ADD
@@ -219,7 +219,7 @@ begin
                     G <= 1'b0;
                     E <= 1'b0;
                     L <= 1'b0;
-                    ERR <= 1'bz;
+                    ERR <= 1'b0;
                 end
             endcase
         end
@@ -232,7 +232,7 @@ begin
             G <= 1'b0;
             E <= 1'b0;
             L <= 1'b0;
-            ERR <= 1'bz;        
+            ERR <= 1'b0;        
 
             case (CMD)
                 4'b0000: RES <= {{N{1'b0}}, OPA_1 & OPB_1};//AND
