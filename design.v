@@ -12,7 +12,9 @@ output reg  OFLOW = 1'b0;
 output reg  G = 1'b0;
 output reg  E = 1'b0;
 output reg  L = 1'b0;
-output reg  ERR = 1'b0;          
+output reg  ERR = 1'b0;   
+output reg  MUL_VALID = 1'b0;
+
 
 // INTERNAL REGISTERS
 reg [N-1:0] OPA_1, OPB_1;
@@ -20,13 +22,14 @@ reg signed [N:0] signedOPA_ext, signedOPB_ext;
 reg signed [N+1:0] signedRES;
 reg [N-1:0]   Mul_OPA, Mul_OPB;
 reg [2*N-1:0] Mul_RES;
-reg  M1active, M2active;
+reg  M1active, M2active,mul_abort;
 
 wire [N:0] add_result;
 wire [N:0] addc_result;
+wire [N:0]   sub_cin_result;
 assign add_result  = {1'b0, OPA_1} + {1'b0, OPB_1};
 assign addc_result = {1'b0, OPA_1} + {1'b0, OPB_1} + {{N{1'b0}}, CIN};
-
+assign sub_cin_result = {1'b0, OPA_1} - {1'b0, OPB_1} - {{N{1'b0}}, CIN};
 always @(*) begin
     OPA_1 = {N{1'b0}};
     OPB_1 = {N{1'b0}};
@@ -51,6 +54,8 @@ begin
         Mul_RES <= {2*N{1'b0}};
         M1active<= 1'b0;
         M2active<= 1'b0;
+        mul_abort<=1;
+        MUL_VALID <= 1'b0; 
     end
     else if (CE) begin
         M2active <= M1active;
@@ -60,9 +65,11 @@ begin
             Mul_OPA  <= OPA_1 + 1'b1;
             Mul_OPB  <= OPB_1 + 1'b1;
             M1active <= 1'b1;
+            mul_abort<=1'b0;
         end
         else begin
             M1active <= 1'b0;
+            mul_abort<=M1active | M2active;
         end
 
         if (MODE) begin
@@ -73,7 +80,7 @@ begin
             E<= 1'b0;
             L<= 1'b0;
             ERR<= 1'b0;  
-            
+            MUL_VALID <= 1'b0;
             case (CMD)
                 // CMD 0 : Unsigned ADD
                 4'b0000: begin
@@ -93,19 +100,19 @@ begin
 
                 // CMD 2 : Unsigned ADD CIN
                 4'b0010: begin
-                    if (INP_VALID == 2'b11) begin
-                        RES  <= {{N{1'b0}}, addc_result[N-1:0]};
-                        COUT <= addc_result[N];
-                    end
+                if (INP_VALID == 2'b11) begin
+                    RES  <= {{N{1'b0}}, addc_result[N-1:0]};
+                    COUT <= addc_result[N];
+                end
                 end
 
                 // CMD 3 : Unsigned SUB CIN
-                4'b0011: begin
-                    if (INP_VALID == 2'b11) begin
-                        OFLOW <= (OPA_1 < OPB_1) ? 1'b1 : 1'b0;
-                        RES <= {{N{1'b0}}, OPA_1 - OPB_1 - {{N-1{1'b0}}, CIN}};
-                    end
-                end
+            4'b0011: begin
+            if (INP_VALID == 2'b11) begin
+                OFLOW <= sub_cin_result[N];
+                RES   <= {{N{1'b0}}, sub_cin_result[N-1:0]};
+            end
+            end
 
                 // CMD 4 : INC_A
                 4'b0100: begin
@@ -155,7 +162,7 @@ begin
 
                 // CMD 9 :MULTIPLCIATION
                 4'b1001: begin
-                    if (M2active)
+                    if (M2active && !mul_abort)
                    begin
                         RES <= Mul_RES;
                         MUL_VALID <= 1'b1;   
