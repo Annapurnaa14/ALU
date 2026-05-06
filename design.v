@@ -13,7 +13,7 @@ output reg  G = 1'b0;
 output reg  E = 1'b0;
 output reg  L = 1'b0;
 output reg  ERR = 1'b0;   
-output reg  MUL_VALID = 1'b0;
+
 
 
 // INTERNAL REGISTERS
@@ -23,6 +23,7 @@ reg signed [N+1:0] signedRES;
 reg [N-1:0]   Mul_OPA, Mul_OPB;
 reg [2*N-1:0] Mul_RES;
 reg  M1active, M2active,mul_abort;
+reg  MUL_VALID = 1'b0;
 
 wire [N:0] add_result;
 wire [N:0] addc_result;
