@@ -12,7 +12,7 @@ wire [2*N-1:0] RES;
 wire OFLOW, COUT, G, L, E, ERR;
 
 // DUT instatiation
-alicode #(N, CMD_W) DUT (
+alucode #(N, CMD_W) DUT (
     .CLK(CLK), .RST(RST),.CIN(CIN),.CE(CE),.MODE(MODE),
     .INP_VALID(INP_VALID),
     .CMD(CMD),
