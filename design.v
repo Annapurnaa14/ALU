@@ -1,309 +1,218 @@
-<<<<<<< HEAD
-module eight_bit_ALU_rtl_design #(parameter N =4 OPA,OPB,INP_VALID,CIN,CLK,RST,CMD,CE,MODE,COUT,OFLOW,RES,G,E,L,ERR);
+`timescale 1ns / 1ps
+module alucode #(parameter N = 4, parameter CMD_W = 4)
+(
+    input  wire CLK, RST, CIN, CE, MODE,
+    input  wire [1:0] INP_VALID,
+    input  wire [CMD_W-1:0] CMD,
+    input  wire [N-1:0] OPA, OPB,
+    output reg  [2*N-1:0] RES,
+    output reg  OFLOW, COUT, G, L, E, ERR
+);
 
-input [N-1:0] OPA,OPB;
-input CLK,RST,CE,MODE,CIN;
-input [1:0]INP_VALID;
-input [3:0] CMD;
+    localparam ROT_BITS = $clog2(N);
 
-output reg [2*N-1:0] RES = {2*N{1'bz}};
-output reg COUT = 1'bz;
-output reg OFLOW = 1'bz;
-output reg G = 1'bz;
-output reg E = 1'bz;
-output reg L = 1'bz;
-output reg ERR = 1'bz;
+    reg [N-1:0] a, b;
+    reg [2*N-1:0] result;
+    reg cout, oflow, g, l, e, err;
 
-reg [N-1:0] OPA_1, OPB_1;
-reg signed [N:0] signedOPA , signedOPB;
-reg signed [2*N:0] signedRES;
+    reg [N-1:0] mul_A0, mul_B0;
+    reg [CMD_W-1:0] mul_CMD0;
+    reg [2*N-1:0] mul_RES1;
+    reg mul_valid0, mul_valid1;
 
-reg [N-1:0] Mul_OPA,Mul_OPB;
-reg[2*N-1:0] Mul_RES;
-reg M1active , M2active;
+    always @(*) begin
+        result = 0;
+        cout   = 0;
+        oflow  = 0;
+        g      = 0;
+        l      = 0;
+        e      = 0;
+        err    = 0;
 
+        case (INP_VALID)
+            2'b01: begin a = OPA; b = 0; end
+            2'b10: begin a = 0;   b = OPB; end
+            2'b11: begin a = OPA; b = OPB; end
+            default: begin a = 0; b = 0; end
+        endcase
 
-always @(*) 
- begin
-  OPA_1 = {N{1'b0}};
-  OPB_1 = {N{1'b0}};
-    
-  case(INP_VALID)
-    2'b00: begin
-           end
- 
-    2'b01: begin
-            OPA_1 = OPA;
+        // ---------------- ARITHMETIC  = MODE 1 ----------------
+        if (MODE) begin
+            case (CMD)
+
+                0: begin
+                    if (INP_VALID == 2'b11) begin
+                        result = a + b;
+                        cout = result[N];
+                    end else err = 1;
+                end
+
+                1: begin
+                    if (INP_VALID == 2'b11) begin
+                        result = a - b;
+                        oflow = (a < b);
+                    end else err = 1;
+                end
+
+                2: begin
+                    if (INP_VALID == 2'b11) begin
+                        result = a + b + CIN;
+                        cout = result[N];
+                    end else err = 1;
+                end
+
+                3: begin
+                    if (INP_VALID == 2'b11) begin
+                        result = a - b - CIN;
+                    end else err = 1;
+                end
+
+                4: begin
+                    if (INP_VALID == 2'b01 || INP_VALID == 2'b11)
+                        result = a + 1;
+                    else err = 1;
+                end
+
+                5: begin
+                    if (INP_VALID != 2'b00)
+                        result = a - 1;
+                    else err = 1;
+                end
+
+                6: begin
+                    if (INP_VALID != 2'b00)
+                        result = b + 1;
+                    else err = 1;
+                end
+
+                7: begin
+                    if (INP_VALID != 2'b00)
+                        result = b - 1;
+                    else err = 1;
+                end
+
+                8: begin
+                    if (INP_VALID == 2'b11) begin
+                        g = (a > b);
+                        l = (a < b);
+                        e = (a == b);
+                    end else err = 1;
+                end
+
+                default: err = 0;
+
+            endcase
         end
- 
-        2'b10: begin
-            OPB_1 = OPB;  
-        end
- 
-        2'b11: begin
-            OPA_1 = OPA;  
-            OPB_1 = OPB;
-        end
- 
-        default: begin
-            OPA_1 = {N{1'b0}};
-            OPB_1 = {N{1'b0}};
-        end
-    endcase
-end
 
-always@(posedge CLK or posede RST)
-      begin
-       if (RST) begin
-        RES   <= {2*N{1'bz}};
-        COUT  <= 1'bz;
-        OFLOW <= 1'bz;
-        G     <= 1'bz;
-        E     <= 1'bz;
-        L     <= 1'bz;
-        ERR   <= 1'bz;
+        // ---------------- LOGICAL = MODE 0 ----------------
+        else begin
+            case (CMD)
 
-        Mul_OPA<= {N{1'b0}};
-        Mul_OPA<= {N{1'b0}};
-        Mul_RES<= {2*N{1'b0}};
-        M1active<= 1'b0;
-        M1active<= 1'b0;
+                0: begin
+                    if (INP_VALID == 2'b11) result = a & b;
+                    else err = 1;
+                end
+
+                1: begin
+                    if (INP_VALID == 2'b11) result = ~(a & b);
+                    else err = 1;
+                end
+
+                2: begin
+                    if (INP_VALID == 2'b11) result = a | b;
+                    else err = 1;
+                end
+
+                3: begin
+                    if (INP_VALID == 2'b11) result = ~(a | b);
+                    else err = 1;
+                end
+
+                4: begin
+                    if (INP_VALID == 2'b11) result = a ^ b;
+                    else err = 1;
+                end
+
+                5: begin
+                    if (INP_VALID == 2'b11) result = ~(a ^ b);
+                    else err = 1;
+                end
+
+                6: begin
+                    if (INP_VALID != 2'b10) result = ~a;
+                    else err = 1;
+                end
+
+                7: begin
+                    if (INP_VALID != 2'b01) result = ~b;
+                    else err = 1;
+                end
+
+                default: err = 0;
+
+            endcase
+        end
     end
-       else if(CE)                   
-        begin
-        M1active<=M2active;
-        Mul_RES<=(Mul_OPA_1)*(Mul_OPB_1);
-    if(CMD==4'b1001 && MODE==1'b1) begin
-		Mul_OPA<=OPA_1;
-		Mul_OPB<=OPB_1;
-		M1active<=1'b1;
-		end
-      else
-	begin
-	    M1active<=1'b0;
+
+    always @(posedge CLK or posedge RST) begin
+
+        if (RST) begin
+            RES = 0; COUT = 0; OFLOW = 0;
+            G = 0; L = 0; E = 0; ERR = 0;
+
+            mul_A0 = 0;
+            mul_B0 = 0;
+            mul_CMD0 = 0;
+            mul_RES1 = 0;
+            mul_valid0 = 0;
+            mul_valid1 = 0;
         end
 
-  if(MODE)         
-         begin
-            RES<={2*N{1'bz}};
-            COUT<=1'bz;
-            OFLOW<=1'bz;
-            G=1'bz;
-            E=1'bz;
-            L=1'bz;
-            ERR=1'bz;
+        else if (CE) begin
 
-            case(CMD)            
-             4'b0000:             
-               begin             
-                 RES<={{n{1'b0}},OPA_1} + {{N{1'b0}}, OPB_1};
-                 COUT<=RES[N]?1'b1 : 1'b0;
-               end
-
-	     4'b0001:             
-               begin
-                 OFLOW<=(OPA_1<OPB_1)? 1'b1: 1'b0;
-                 RES<=OPA_1-OPB_1;
-               end
-
-             4'b0010:             
-               begin
-                 RES<={{n{1'b0}},OPA_1} + {{N{1'b0}}, OPB_1}+CIN;
-                 COUT<=RES[N]?1:0;
-               end
-
-            4'b0011:            
-              begin
-                OFLOW<=(OPA<OPB)?1'b1:1'b0;
-                RES<=OPA-OPB-CIN;
-              end
-
-           4'b0100: begin  		
-		if(INP_VALID==2'b01) 
-                     RES<=OPA_1+1;
-		end               
-           4'b0101: begin  		
-		if(INP_VALID==2'b01) 
-                     RES<=OPA_1-1;
-		end 
-           4'b0110: begin     
-		if(INP_VALID==2'b10) 
-                     RES<=OPB_1+1;
-		end 
-           4'b0111: begin     		
-		if(INP_VALID==2'b10) 
-                     RES<=OPB_1-1;
-	 	end
-            4'b1000:     
-              begin
-                RES={2*{1'bz}};
-                    if(OPA_1==OPB_1)
-                     begin
-                         E<=1'b1, G<=1'bz, L<=1'bz;
-             end
-            else if(OPA_1>OPB_1)
-               begin
-                   E=1'bz; G=1'b1, L=1'bz;
-               end
-            else 
-             begin
-               E=1'bz, G=1'bz, L=1'b1;
-             end
-           end
-    
- 	 4'b1001:
-	  begin
-		if(M2active)
-	          RES <= Mul_RES;
+            // stage 1
+            if (MODE && INP_VALID == 2'b11 &&
+               (CMD == 4'd9 || CMD == 4'd10)) begin
+                mul_A0 <= OPA;
+                mul_B0 <= OPB;
+                mul_CMD0 <= CMD;
+                mul_valid0 <= 1;
+            end
+            else begin
+                mul_valid0 <= 0;
             end
 
-	4'b1010:
-	  begin
-	    RES<=(OPA_1<<OPB_1)*OPB_1
-	 end
+            // stage 2
+            mul_valid1 <= mul_valid0;
 
+            if (mul_valid0) begin
+                if (mul_CMD0 == 4'd9)
+                    mul_RES1 <= (mul_A0 + 1) * (mul_B0 + 1);
+                else
+                    mul_RES1 <= (mul_A0 << 1) * mul_B0;
+            end
 
-	 4'b1011: begin
-                    signedOPA_ext = $signed({{1'b0}, OPA_1});                       
-                    signedOPB_ext = $signed({{1'b0}, OPB_1});
-                    signedRES     = signedOPA_ext + signedOPB_ext;
-                    RES   <= signedRES[N-1:0];
-                    COUT  <= signedRES[N];
-                    OFLOW <= (OPA_1[N-1] == OPB_1[N-1]) && (signedRES[N-1] != OPA_1[N-1]);
-                    if ($signed(OPA_1) > $signed(OPB_1)) 
-			  begin
-                            G <= 1'b1; E <= 1'b0; L <= 1'b0;
-                    	  end 
-			else if ($signed(OPA_1) == $signed(OPB_1)) 
-		       	  begin
-                            G <= 1'b0; E <= 1'b1; L <= 1'b0;
-                    	  end 
-			else 
-			  begin
-                            G <= 1'b0; E <= 1'b0; L <= 1'b1;
-                          end
-                end
-          
-	4'b1100:
-	    begin
-	       signedOPA_ext = $signed({{1'b0}, OPA_1});                       
-               signedOPB_ext = $signed({{1'b0}, OPB_1});
-               signedRES = signedOPA_ext + signedOPB_ext;
-               RES   <= signedRES[N-1:0];
-               COUT  <= signedRES[N];
-               OFLOW <= (OPA_1[N-1] == OPB_1[N-1]) && (signedRES[N-1] != OPA_1[N-1]);
-	       if ($signed(OPA_1) > $signed(OPB_1)) 
-			  begin
-                            G <= 1'b1; E <= 1'b0; L <= 1'b0;
-                    	  end 
-			else if ($signed(OPA_1) == $signed(OPB_1)) 
-		       	  begin
-                            G <= 1'b0; E <= 1'b1; L <= 1'b0;
-                    	  end 
-			else 
-			  begin
-                            G <= 1'b0; E <= 1'b0; L <= 1'b1;
-                          end
-		end
+            // stage 3
+            if (mul_valid1) begin
+                RES <= mul_RES1;
+                COUT <= 0;
+                OFLOW <= 0;
+                G <= 0;
+                L <= 0;
+                E <= 0;
+                ERR <= 0;
+            end
 
-default:   
-            begin
-            RES<={2*N{1'bz}};
-            COUT<=1'bz;
-            OFLOW<=1'bz;
-            G<=1'bz;
-            E<=1'bz;
-            L<=1'bz;
-            ERR<=1'bz;
-           end
-          endcase
-
-         end
-        else     
-        begin 
-
-           RES<=9'bzzzzzzzzz;
-           COUT<=1'bz;
-           OFLOW<=1'bz;
-           G<=1'bz;
-           E<=1'bz;
-           L<=1'bz;
-           ERR<=1'bz;
-           case(CMD)    
-                4'b0000: RES <= {{N{1'b0}}, OPA_1 & OPB_1};     
-                4'b0001: RES <= {{N{1'b0}}, ~(OPA_1 & OPB_1)};  
-                4'b0010: RES <= {{N{1'b0}}, OPA_1 | OPB_1};     
-                4'b0011: RES <= {{N{1'b0}}, ~(OPA_1 | OPB_1)};  
-                4'b0100: RES <= {{N{1'b0}}, OPA_1 ^ OPB_1};     
-                4'b0101: RES <= {{N{1'b0}}, ~(OPA_1 ^ OPB_1)};  
-                4'b0110: RES <= {{N{1'b0}}, ~OPA_1};            
-                4'b0111: RES <= {{N{1'b0}}, ~OPB_1};            
-                4'b1000: RES <= {{N{1'b0}}, OPA_1 >> 1};                              
-                4'b1001: RES <= {{N{1'b0}}, OPA_1 << 1};        
-                4'b1010: RES <= {{N{1'b0}}, OPB_1 >> 1};        
-                4'b1011: RES <= {{N{1'b0}}, OPB_1 << 1};       
-
-             4'b1100: 
-                 begin                       
-		casex (OPB)
-                  8'b0000_X000 : RES=OPA;
-       	      	  8'b0000_X001 : RES={OPA_1[6:0], OPA_1[7]}; 
-	       	  8'b0000_X010 : RES= {OPA_1[5:0], OPA_1[7:6]};
-       	       	  8'b0000_X011 : RES={OPA_1[4:0], OPA_1[7:5]};
-		  8'b0000_X100 : RES={OPA_1[3:0], OPA_1[7:4]};
-       	       	  8'b0000_X101 : RES={OPA_1[3:0], OPA_1[7:3]};
-	          8'b0000_X110 : RES={OPA_1[3:0], OPA_1[7:2]};
-       	          8'b0000_X111 : RES={OPA_1[3:0], OPA_1[7:1]};
-		  default: RES=OPA;
-		endcase
-             end
-
-	    4'b1100:
-		begin
-		ERR = 1'b0;
-    		if (OPB[N-1:3] != 0) begin
-        	ERR = 1'b1;
-        	RES = {1'b0, OPA};
-    		end
-
-    		else begin
-        	if (OPB[2:0] == 0)
-            		RES = {1'b0, OPA};
-        	else
-            		RES = {1'b0, (OPA << OPB[2:0]) | (OPA >> (N - OPB[2:0]))};
-   		 end
-		end
-
- 	   4'b1101: begin 
-		if(OPB[7:4]==4'b111)
-		  ERR = 1'b1;
-		else
-		ERR = 1'b0;
-    		if (OPB[N-1:3] != 0) begin
-       			 ERR = 1'b1;
-        		 RES = {1'b1, OPA};
-    			 end
-		else 
-		  begin
-       		   if (OPB[2:0] == 0)
-                   RES = {1'b0, OPA};
-               else
-            	   RES = {1'b0, (OPA >> OPB[2:0]) | (OPA << (N - OPB[2:0]))};
-    		end
-		end
-             
-             default: 
-               begin
-               RES=9'bzzzzzzzzz;
-               COUT=1'bz;
-               OFLOW=1'bz;
-               G=1'bz;
-               E=1'bz;
-               L=1'bz;
-               ERR=1'bz;
-               end
-          endcase
-     end
+            else if (!(MODE && (CMD == 4'd9 || CMD == 4'd10))) begin
+                RES <= result;
+                COUT <= cout;
+                OFLOW <= oflow;
+                G <= g;
+                L <= l;
+                E <= e;
+                ERR <= err;
+            end
+        end
     end
-   end
+
 endmodule
