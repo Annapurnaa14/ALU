@@ -61,10 +61,12 @@ module alucode #(parameter N = 4, parameter CMD_W = 4)
                     end else err = 1;
                 end
 
-                3: begin
-                    if (INP_VALID == 2'b11) begin
-                        result = a - b - CIN;
-                    end else err = 1;
+              3: begin
+                if (INP_VALID == 2'b11) begin
+                    result = a - b - CIN;
+                    oflow = (a < (b + CIN));
+                end
+                else err = 1;
                 end
 
                 4: begin
@@ -74,19 +76,19 @@ module alucode #(parameter N = 4, parameter CMD_W = 4)
                 end
 
                 5: begin
-                    if (INP_VALID != 2'b00)
+                    if (INP_VALID == 2'b01 || INP_VALID == 2'b11)
                         result = a - 1;
                     else err = 1;
                 end
 
                 6: begin
-                    if (INP_VALID != 2'b00)
-                        result = b + 1;
+                    if (INP_VALID == 2'b10 || INP_VALID == 2'b11)
+                    result = b + 1;
                     else err = 1;
                 end
 
                 7: begin
-                    if (INP_VALID != 2'b00)
+                    if (INP_VALID == 2'b10 || INP_VALID == 2'b11)
                         result = b - 1;
                     else err = 1;
                 end
@@ -99,7 +101,23 @@ module alucode #(parameter N = 4, parameter CMD_W = 4)
                     end else err = 1;
                 end
 
-                default: err = 0;
+                11: begin
+               if (INP_VALID == 2'b11) begin
+                 result = $signed(a) + $signed(b);
+                oflow = (a[N-1] == b[N-1]) && (result[N-1] != a[N-1]);
+                end
+                else err = 1;
+            end
+
+            12: begin
+                if (INP_VALID == 2'b11) begin
+                    result = $signed(a) - $signed(b);
+                    oflow = (a[N-1] != b[N-1]) && (result[N-1] != a[N-1]);
+                end
+                else err = 1;
+            end        
+
+                default: err = 1;
 
             endcase
         end
@@ -139,40 +157,94 @@ module alucode #(parameter N = 4, parameter CMD_W = 4)
                 end
 
                 6: begin
-                    if (INP_VALID != 2'b10) result = ~a;
+                    if (INP_VALID == 2'b01 || INP_VALID == 2'b11) result = ~a;
                     else err = 1;
                 end
 
                 7: begin
-                    if (INP_VALID != 2'b01) result = ~b;
+                    if (INP_VALID == 2'b10 || INP_VALID == 2'b11) result = ~b;
                     else err = 1;
                 end
 
-                default: err = 0;
+                8: begin
+                if (INP_VALID == 2'b01 || INP_VALID == 2'b11)
+                    result = a >> 1;
+                else err = 1;
+                end
+
+            9: begin
+                if (INP_VALID == 2'b01 || INP_VALID == 2'b11)
+                    result = a << 1;
+                    else err = 1;
+                end
+
+        10: begin
+            if (INP_VALID == 2'b10 || INP_VALID == 2'b11)
+               result = b >> 1;
+                else err = 1;
+            end
+
+        11: begin
+            if (INP_VALID == 2'b10 || INP_VALID == 2'b11)
+                result = b << 1;
+                else err = 1;
+        end
+
+        12: begin
+    if ((INP_VALID == 2'b11) &&
+        (b[N-1:ROT_BITS] == {(N-ROT_BITS){1'b0}}))
+    begin
+        result = (a << b[ROT_BITS-1:0]) |
+                 (a >> (N - b[ROT_BITS-1:0]));
+    end
+    else begin
+        err = 1;
+        result = (a << b[ROT_BITS-1:0]) |
+                 (a >> (N - b[ROT_BITS-1:0]));
+    end
+end
+
+13: begin
+    if ((INP_VALID == 2'b11) &&
+        (b[N-1:ROT_BITS] == {(N-ROT_BITS){1'b0}}))
+    begin
+        result = (a >> b[ROT_BITS-1:0]) |
+                 (a << (N - b[ROT_BITS-1:0]));
+    end
+    else begin
+        err = 1;
+        result = (a >> b[ROT_BITS-1:0]) |
+                 (a << (N - b[ROT_BITS-1:0]));
+    end
+end
+                default: err = 1;
 
             endcase
         end
     end
 
     always @(posedge CLK or posedge RST) begin
+     if (RST) begin
+    RES <= 0;
+    COUT <= 0;
+    OFLOW <= 0;
+    G <= 0;
+    L <= 0;
+    E <= 0;
+    ERR <= 0;
 
-        if (RST) begin
-            RES = 0; COUT = 0; OFLOW = 0;
-            G = 0; L = 0; E = 0; ERR = 0;
-
-            mul_A0 = 0;
-            mul_B0 = 0;
-            mul_CMD0 = 0;
-            mul_RES1 = 0;
-            mul_valid0 = 0;
-            mul_valid1 = 0;
-        end
+    mul_A0 <= 0;
+    mul_B0 <= 0;
+    mul_CMD0 <= 0;
+    mul_RES1 <= 0;
+    mul_valid0 <= 0;
+    mul_valid1 <= 0;
+end
 
         else if (CE) begin
 
             // stage 1
-            if (MODE && INP_VALID == 2'b11 &&
-               (CMD == 4'd9 || CMD == 4'd10)) begin
+            if (MODE && INP_VALID == 2'b11 && (CMD == 4'd9 || CMD == 4'd10)) begin
                 mul_A0 <= OPA;
                 mul_B0 <= OPB;
                 mul_CMD0 <= CMD;
